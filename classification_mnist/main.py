@@ -10,6 +10,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import gpflow
 from gpflow.utilities import to_default_float
+from cnn import Cnn
 
 def main():
     (ds_train, ds_test), ds_info = tfds.load(
@@ -37,23 +38,9 @@ def main():
     ds_test = ds_test.cache()
     ds_test = ds_test.prefetch(tf.data.experimental.AUTOTUNE)
 
-    model = tf.keras.models.Sequential([
-        tf.keras.layers.Flatten(input_shape=(28, 28, 1)),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(10, activation='softmax')
-    ])
-    model.compile(
-        loss='sparse_categorical_crossentropy',
-        optimizer=tf.keras.optimizers.Adam(0.001),
-        metrics=['accuracy'],
-    )
-
-    model.fit(
-        ds_train,
-        epochs=6,
-        validation_data=ds_test,
-    )
-
+    cnn = Cnn()
+    cnn.train(ds_train, ds_test)
+    cnn.save()
 
 if __name__ == '__main__':
     main()
