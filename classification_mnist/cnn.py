@@ -3,29 +3,31 @@ import os
 
 class Cnn():
     def __init__(self):
-        self.model, self.feature_extractor, self.head = self._create_model()
+        self.model = None
+        self.feature_extractor = None
+        self.head = None
 
-    def _create_model(self):
-        feature_extractor = tf.keras.models.Sequential([
+    def create_model(self):
+        self.feature_extractor = tf.keras.models.Sequential([
             tf.keras.layers.Flatten(input_shape=(28, 28, 1)),
             tf.keras.layers.Dense(128, activation='relu')])
-        head = tf.keras.models.Sequential([
+        self.head = tf.keras.models.Sequential([
             tf.keras.layers.Dense(10, activation='softmax')
         ])
 
-        model = tf.keras.models.Sequential([feature_extractor, head])
+        self.model = tf.keras.models.Sequential([self.feature_extractor, self.head])
 
-        model.compile(
+        self.model.compile(
             loss='sparse_categorical_crossentropy',
             optimizer=tf.keras.optimizers.Adam(0.001),
             metrics=['accuracy'],
         )
-        return model, feature_extractor, head
+        self.model.summary()
 
     def train(self, train_data, test_data):
         self.model.fit(
             train_data,
-            epochs=6,
+            epochs=2,
             validation_data=test_data,
         )
 
@@ -34,5 +36,12 @@ class Cnn():
         #                                           outputs=self.model.layers[1].output)
         # head = tf.keras.models.Model(inputs=self.model.layers[2].input,
         #                              outputs=self.model.layers[2].output)
-        self.feature_extractor.save(os.path.join(path, name + "_feature_ext"))
-        self.head.save(os.path.join(path, name + "_head"))
+        self.feature_extractor.save(os.path.join(path, name + "_feature_extractor.h5"))
+        self.head.save(os.path.join(path, name + "_head.h5"))
+
+    def load_combined_model(self, path: str = "./models/",  name: str = "cnn"):
+        self.feature_extractor = tf.saved_model.load(os.path.join(path, name + "_feature_extractor.h5"))
+        self.head = tf.saved_model.load(os.path.join(path, name + "_head.h5"))
+        self.model = tf.keras.models.Sequential([self.feature_extractor, self.head])
+
+

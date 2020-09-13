@@ -39,8 +39,11 @@ def main():
     ds_test = ds_test.prefetch(tf.data.experimental.AUTOTUNE)
 
     cnn = Cnn()
+    cnn.create_model()
     cnn.train(ds_train, ds_test)
     cnn.save()
+    cnn_loaded = Cnn()
+    cnn_loaded.load_combined_model()
 
 if __name__ == '__main__':
     main()
