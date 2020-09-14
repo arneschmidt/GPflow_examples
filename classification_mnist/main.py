@@ -44,6 +44,7 @@ def main():
     cnn.save()
     cnn_loaded = Cnn()
     cnn_loaded.load_combined_model()
+    cnn_loaded.model.evaluate(ds_test)
 
 if __name__ == '__main__':
     main()

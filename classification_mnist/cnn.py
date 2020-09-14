@@ -32,16 +32,18 @@ class Cnn():
         )
 
     def save(self, path: str = "./models/",  name: str = "cnn"):
-        # feature_extractor = tf.keras.models.Model(inputs=self.model.layers[0].input,
-        #                                           outputs=self.model.layers[1].output)
-        # head = tf.keras.models.Model(inputs=self.model.layers[2].input,
-        #                              outputs=self.model.layers[2].output)
         self.feature_extractor.save(os.path.join(path, name + "_feature_extractor.h5"))
         self.head.save(os.path.join(path, name + "_head.h5"))
 
     def load_combined_model(self, path: str = "./models/",  name: str = "cnn"):
-        self.feature_extractor = tf.saved_model.load(os.path.join(path, name + "_feature_extractor.h5"))
-        self.head = tf.saved_model.load(os.path.join(path, name + "_head.h5"))
+        self.feature_extractor = tf.keras.models.load_model(os.path.join(path, name + "_feature_extractor.h5"))
+        self.head = tf.keras.models.load_model(os.path.join(path, name + "_head.h5"))
         self.model = tf.keras.models.Sequential([self.feature_extractor, self.head])
+        self.model.compile(
+            loss='sparse_categorical_crossentropy',
+            optimizer=tf.keras.optimizers.Adam(0.001),
+            metrics=['accuracy'],
+        )
+        self.model.summary()
 
 
