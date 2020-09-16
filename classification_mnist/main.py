@@ -12,7 +12,7 @@ import gpflow
 from gpflow.utilities import to_default_float
 from cnn import Cnn
 
-def main():
+def load_data():
     (ds_train, ds_test), ds_info = tfds.load(
         'mnist',
         split=['train', 'test'],
@@ -38,10 +38,40 @@ def main():
     ds_test = ds_test.cache()
     ds_test = ds_test.prefetch(tf.data.experimental.AUTOTUNE)
 
+    return ds_train, ds_test
+
+
+
+def main():
+    ds_train, ds_test = load_data()
+
     cnn = Cnn()
     cnn.create_model()
     cnn.train(ds_train, ds_test)
     cnn.save()
+
+    num_mnist_classes = 10
+    output_dim = 5
+    num_inducing_points = 100
+    images_subset, labels_subset = next(iter(dataset.batch(32)))
+    images_subset = tf.reshape(images_subset, [-1, image_size])
+    labels_subset = tf.reshape(labels_subset, [-1, 1])
+
+    kernel = gpflow.kernels.SquaredExponential()
+    likelihood = gpflow.likelihoods.MultiClass(num_mnist_classes)
+
+    inducing_variable_kmeans = kmeans2(images_subset.numpy(), num_inducing_points, minit="points")[0]
+    inducing_variable_cnn = kernel.cnn(inducing_variable_kmeans)
+    inducing_variable = KernelSpaceInducingPoints(inducing_variable_cnn)
+
+    model = gpflow.models.SVGP(
+        kernel,
+        likelihood,
+        inducing_variable=inducing_variable,
+        num_data=total_num_data,
+        num_latent_gps=num_mnist_classes,
+    )
+
     cnn_loaded = Cnn()
     cnn_loaded.load_combined_model()
     cnn_loaded.model.evaluate(ds_test)
