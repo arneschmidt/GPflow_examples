@@ -12,7 +12,7 @@ import gpflow
 from gpflow.utilities import to_default_float
 from cnn import Cnn
 
-def load_data():
+def load_data(batch_size: int):
     (ds_train, ds_test), ds_info = tfds.load(
         'mnist',
         split=['train', 'test'],
@@ -20,61 +20,49 @@ def load_data():
         as_supervised=True,
         with_info=True,
     )
+    image_shape = ds_info.features["image"].shape
+    image_size = tf.reduce_prod(image_shape)
 
-    def normalize_img(image, label):
-        """Normalizes images: `uint8` -> `float32`."""
-        return tf.cast(image, tf.float32) / 255., label
+    def map_fn(image, label):
+        image = to_default_float(image) / 255.0
+        label = to_default_float(label)
+        return tf.reshape(image, [-1, image_size]), label
 
-    ds_train = ds_train.map(
-        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     ds_train = ds_train.cache()
     ds_train = ds_train.shuffle(ds_info.splits['train'].num_examples)
-    ds_train = ds_train.batch(128)
+    ds_train = ds_train.batch(batch_size)
+    ds_train = ds_train.map(
+        map_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+
+    ds_test = ds_test.cache()
     ds_train = ds_train.prefetch(tf.data.experimental.AUTOTUNE)
 
+    ds_test = ds_test.batch(batch_size)
     ds_test = ds_test.map(
-        normalize_img, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    ds_test = ds_test.batch(128)
-    ds_test = ds_test.cache()
+        map_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     ds_test = ds_test.prefetch(tf.data.experimental.AUTOTUNE)
 
-    return ds_train, ds_test
+    return ds_train, ds_test, ds_info
 
 
 
 def main():
-    ds_train, ds_test = load_data()
+    batch_size = 32
+    ds_train, ds_test, info = load_data(batch_size)
 
-    cnn = Cnn()
+    total_num_data = info.splits["train"].num_examples
+    image_shape = info.features["image"].shape
+    image_size = tf.reduce_prod(image_shape)
+
+    cnn = Cnn(batch_size=batch_size, image_shape=image_shape, feature_outputs=int(5))
     cnn.create_model()
     cnn.train(ds_train, ds_test)
     cnn.save()
 
-    num_mnist_classes = 10
-    output_dim = 5
-    num_inducing_points = 100
-    images_subset, labels_subset = next(iter(dataset.batch(32)))
-    images_subset = tf.reshape(images_subset, [-1, image_size])
-    labels_subset = tf.reshape(labels_subset, [-1, 1])
-
-    kernel = gpflow.kernels.SquaredExponential()
-    likelihood = gpflow.likelihoods.MultiClass(num_mnist_classes)
-
-    inducing_variable_kmeans = kmeans2(images_subset.numpy(), num_inducing_points, minit="points")[0]
-    inducing_variable_cnn = kernel.cnn(inducing_variable_kmeans)
-    inducing_variable = KernelSpaceInducingPoints(inducing_variable_cnn)
-
-    model = gpflow.models.SVGP(
-        kernel,
-        likelihood,
-        inducing_variable=inducing_variable,
-        num_data=total_num_data,
-        num_latent_gps=num_mnist_classes,
-    )
-
     cnn_loaded = Cnn()
     cnn_loaded.load_combined_model()
-    cnn_loaded.model.evaluate(ds_test)
+
 
 if __name__ == '__main__':
     main()
