@@ -18,16 +18,14 @@ class DeepKernelGP():
         self.model = self.initialize_model(total_num_data, batch_size, image_size, num_mnist_classes, feature_outputs,
                  num_inducing_points)
 
-
-
-    def initialize_model(self, total_num_data: int, batch_size: int, image_size: int, num_mnist_classes: int, feature_outputs: int,
+    def initialize_model(self, total_num_data: int, batch_size: int, image_size: int, num_mnist_classes: int, cnn_model,
                  num_inducing_points: int):
         images_subset, labels_subset = next(iter(self.dataset.batch(32)))
         images_subset = tf.reshape(images_subset, [-1, image_size])
         labels_subset = tf.reshape(labels_subset, [-1, 1])
 
         kernel = KernelWithConvNN(
-            feature_outputs, gpflow.kernels.SquaredExponential(), batch_size=batch_size
+            cnn_model, gpflow.kernels.SquaredExponential(), batch_size=batch_size
         )
 
         likelihood = gpflow.likelihoods.MultiClass(num_mnist_classes)

@@ -33,11 +33,9 @@ def load_data(batch_size: int):
     ds_train = ds_train.batch(batch_size)
     ds_train = ds_train.map(
         map_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-
-    ds_test = ds_test.cache()
     ds_train = ds_train.prefetch(tf.data.experimental.AUTOTUNE)
 
+    ds_test = ds_test.cache()
     ds_test = ds_test.batch(batch_size)
     ds_test = ds_test.map(
         map_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -46,22 +44,20 @@ def load_data(batch_size: int):
     return ds_train, ds_test, ds_info
 
 
-
 def main():
-    batch_size = 32
+    batch_size = 128
     ds_train, ds_test, info = load_data(batch_size)
 
-    total_num_data = info.splits["train"].num_examples
     image_shape = info.features["image"].shape
-    image_size = tf.reduce_prod(image_shape)
 
-    cnn = Cnn(batch_size=batch_size, image_shape=image_shape, feature_outputs=int(5))
-    cnn.create_model()
+    cnn = Cnn()
+    cnn.create_model(batch_size=batch_size, image_shape=image_shape, feature_outputs=int(5))
     cnn.train(ds_train, ds_test)
     cnn.save()
 
     cnn_loaded = Cnn()
     cnn_loaded.load_combined_model()
+    cnn_loaded.test(ds_test)
 
 
 if __name__ == '__main__':
