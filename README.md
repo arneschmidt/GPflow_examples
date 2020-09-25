@@ -1,2 +1,3 @@
 # This repository contains some examples of Gaussian Processes with GPflow
-* regression_with_GP.py: simple example of a regression task with a GP with squared exponential kernel
+* regression_with_GP: Simple example of a regression task with a GP with squared exponential kernel, based on https://gpflow.readthedocs.io/en/master/notebooks/basics/regression.html
+* classification_mnist: Deep kernel GP with pretraining for the Cnn. Based on https://gpflow.readthedocs.io/en/master/notebooks/tailor/gp_nn.html 
