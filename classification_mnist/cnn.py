@@ -20,7 +20,8 @@ class Cnn():
 
         self.feature_extractor = tf.keras.models.Sequential([
             tf.keras.layers.Flatten(input_shape=input_shape),
-            tf.keras.layers.Dense(128, activation='relu')])
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Lambda(to_default_float)])
         self.head = tf.keras.models.Sequential([
             tf.keras.layers.Dense(10, activation='softmax')
         ])
@@ -34,10 +35,11 @@ class Cnn():
         )
         self.model.summary()
 
-    def train(self, train_data, test_data):
+    def train(self, train_data, test_data, epochs: int):
         self.model.fit(
             train_data,
             epochs=2,
+            steps_per_epoch=1000,
             validation_data=test_data,
         )
     def test(self, test_data):
@@ -58,4 +60,5 @@ class Cnn():
         )
         self.model.summary()
 
-
+    def load_feature_extractor(self, path: str = "./models/",  name: str = "cnn"):
+        self.feature_extractor = tf.keras.models.load_model(os.path.join(path, name + "_feature_extractor.h5"))

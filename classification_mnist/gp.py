@@ -12,20 +12,20 @@ import gpflow
 from gpflow.utilities import to_default_float
 
 class DeepKernelGP():
-    def __init__(self, dataset, total_num_data: int, batch_size: int, image_size: int, num_mnist_classes: int, feature_outputs: int,
+    def __init__(self, dataset, total_num_data: int, image_size: int, num_mnist_classes: int, cnn_model,
                  num_inducing_points: int):
         self.dataset = dataset
-        self.model = self.initialize_model(total_num_data, batch_size, image_size, num_mnist_classes, feature_outputs,
+        self.model = self.initialize_model(total_num_data, image_size, num_mnist_classes, cnn_model,
                  num_inducing_points)
 
-    def initialize_model(self, total_num_data: int, batch_size: int, image_size: int, num_mnist_classes: int, cnn_model,
+    def initialize_model(self, total_num_data: int, image_size: int, num_mnist_classes: int, cnn_model,
                  num_inducing_points: int):
         images_subset, labels_subset = next(iter(self.dataset.batch(32)))
         images_subset = tf.reshape(images_subset, [-1, image_size])
         labels_subset = tf.reshape(labels_subset, [-1, 1])
 
         kernel = KernelWithConvNN(
-            cnn_model, gpflow.kernels.SquaredExponential(), batch_size=batch_size
+            cnn_model, gpflow.kernels.SquaredExponential()
         )
 
         likelihood = gpflow.likelihoods.MultiClass(num_mnist_classes)
@@ -43,12 +43,36 @@ class DeepKernelGP():
         )
         return model
 
+    def train(self, steps: int):
+        data_iterator = iter(self.dataset)
+        adam_opt = tf.optimizers.Adam(0.001)
+
+        training_loss = self.model.training_loss_closure(data_iterator)
+
+        @tf.function
+        def optimization_step():
+            adam_opt.minimize(training_loss, var_list=self.model.trainable_variables)
+
+        for s in range(steps):
+            optimization_step()
+        print("finished training")
+
+    def test(self, test_set, image_size):
+        images_subset, labels_subset = next(iter(test_set.batch(32)))
+        images_subset = tf.reshape(images_subset, [-1, image_size])
+        labels_subset = tf.reshape(labels_subset, [-1, 1])
+        m, v = self.model.predict_y(images_subset)
+        preds = np.argmax(m, 1).reshape(labels_subset.numpy().shape)
+        correct = preds == labels_subset.numpy().astype(int)
+        acc = np.average(correct.astype(float)) * 100.0
+
+        print("Accuracy is {:.4f}%".format(acc))
+
 class KernelWithConvNN(gpflow.kernels.Kernel):
     def __init__(
         self,
         cnn: tf.keras.models.Model,
-        base_kernel: gpflow.kernels.Kernel,
-        batch_size: Optional[int] = None,
+        base_kernel: gpflow.kernels.Kernel
     ):
         super().__init__()
         with self.name_scope:
