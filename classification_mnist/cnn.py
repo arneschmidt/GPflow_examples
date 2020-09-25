@@ -35,14 +35,15 @@ class Cnn():
         )
         self.model.summary()
 
-    def train(self, train_data, test_data, epochs: int):
+    def train(self, train_data, test_data, epochs: int, steps_per_epoch: int):
         self.model.fit(
             train_data,
-            epochs=2,
-            steps_per_epoch=1000,
+            epochs=epochs,
+            steps_per_epoch=steps_per_epoch,
             validation_data=test_data,
         )
     def test(self, test_data):
+        print("Test CNN model")
         self.model.evaluate(test_data)
 
     def save(self, path: str = "./models/",  name: str = "cnn"):

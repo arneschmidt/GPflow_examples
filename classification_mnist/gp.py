@@ -54,19 +54,25 @@ class DeepKernelGP():
             adam_opt.minimize(training_loss, var_list=self.model.trainable_variables)
 
         for s in range(steps):
+            if s%100==0:
+                print("GP train step " + str(s) + " of " + str(steps))
             optimization_step()
         print("finished training")
 
-    def test(self, test_set, image_size):
-        images_subset, labels_subset = next(iter(test_set.batch(32)))
-        images_subset = tf.reshape(images_subset, [-1, image_size])
-        labels_subset = tf.reshape(labels_subset, [-1, 1])
-        m, v = self.model.predict_y(images_subset)
-        preds = np.argmax(m, 1).reshape(labels_subset.numpy().shape)
-        correct = preds == labels_subset.numpy().astype(int)
+    def test(self, test_set, image_size, batch_size, num_test_samples):
+        preds = []
+        labels = []
+        for batch in iter(test_set.batch(batch_size)):
+            images_subset, labels_subset = batch
+            images_subset = tf.reshape(images_subset, [-1, image_size])
+            labels_subset = tf.reshape(labels_subset, [-1, 1])
+            m, v = self.model.predict_y(images_subset)
+            preds.append(np.argmax(m, 1).reshape(labels_subset.numpy().shape))
+            labels.append(labels_subset.numpy().astype(int))
+        correct = np.array(preds) == np.array(labels)
         acc = np.average(correct.astype(float)) * 100.0
 
-        print("Accuracy is {:.4f}%".format(acc))
+        print("Deep Kernel GP Accuracy is {:.4f}%".format(acc))
 
 class KernelWithConvNN(gpflow.kernels.Kernel):
     def __init__(
